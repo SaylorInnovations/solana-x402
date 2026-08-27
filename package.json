@@ -1,0 +1,42 @@
+{
+  "name": "solana-x402",
+  "version": "0.1.0",
+  "description": "Zero-dependency x402 (HTTP 402 Payment Required) resource server for Solana — self-verified settlement with no facilitator fee, plus optional CDP/PayAI facilitator settlement with automatic x402 Bazaar discoverability. Base (EVM) supported too.",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "src/",
+    "examples/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/smoke.test.js"
+  },
+  "keywords": [
+    "x402",
+    "solana",
+    "agentic-commerce",
+    "ai-agents",
+    "payments",
+    "usdc",
+    "coinbase",
+    "cdp",
+    "bazaar",
+    "http-402",
+    "micropayments",
+    "netlify-functions"
+  ],
+  "author": "Saylor Innovations",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SaylorInnovations/solana-x402.git"
+  },
+  "homepage": "https://github.com/SaylorInnovations/solana-x402#readme",
+  "bugs": {
+    "url": "https://github.com/SaylorInnovations/solana-x402/issues"
+  },
+  "dependencies": {}
+}
