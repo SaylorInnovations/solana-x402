@@ -187,12 +187,62 @@ class X402 {
 
   // Auto-derive a Bazaar discoverability block from resource.outputSchema
   // unless the caller supplied resource.bazaar explicitly (including `false`
-  // to opt a specific resource out).
+  // to opt a specific resource out, or a full custom {info, schema} object).
+  //
+  // Shape and placement per the x402 bazaar extension spec
+  // (github.com/coinbase/x402 specs/extensions/bazaar.md): an {info, schema}
+  // object, attached to paymentPayload.extensions.bazaar in settle() below --
+  // NOT paymentRequirements.extensions, and NOT the flatter
+  // {discoverable, category, tags, inputSchema, outputSchema} shape this used
+  // to build through v0.1.0. Both were wrong and verified as such against a
+  // real CDP account: that shape/location produced an empty EXTENSION-
+  // RESPONSES ({}) on every real settlement -- nothing was ever actually
+  // catalogued. The corrected shape below gets a real "processing"/
+  // "rejected" response, confirmed with 10 separate real payments against a
+  // live deployment (saylorinnovations.com's Watchdog API).
+  //
+  // resource.inputSchema keys become an example params object. Set
+  // resource.routeTemplate (e.g. '/api/price/:mint') if your route has a
+  // path parameter -- the params are then advertised as info.input.pathParams
+  // and grouped under that one catalog entry, per the spec's "Dynamic
+  // Routes" mechanism. Without a routeTemplate, params are advertised as
+  // ordinary queryParams instead (the safer default for a generic library
+  // that doesn't otherwise know your routing).
   _bazaarBlock(resource) {
     if (resource.bazaar === false) return null;
     if (resource.bazaar) return resource.bazaar;
     if (!resource.outputSchema) return null;
-    return { discoverable: true, category: resource.category || 'Data', tags: resource.tags || [], inputSchema: resource.inputSchema, outputSchema: resource.outputSchema };
+
+    const inputKeys = Object.keys(resource.inputSchema || {});
+    const example = inputKeys.length
+      ? Object.fromEntries(inputKeys.map(k => [k, (resource.inputExample && resource.inputExample[k]) || k]))
+      : null;
+    const paramsKey = resource.routeTemplate ? 'pathParams' : 'queryParams';
+
+    const input = Object.assign({ type: 'http', method: resource.method || 'GET' }, example ? { [paramsKey]: example } : {});
+    const inputProps = {
+      type: { type: 'string', const: 'http' },
+      method: { type: 'string', enum: ['GET', 'HEAD', 'DELETE'] }
+    };
+    const required = ['type', 'method'];
+    if (example) {
+      inputProps[paramsKey] = { type: 'object', properties: Object.fromEntries(inputKeys.map(k => [k, { type: 'string' }])), required: inputKeys };
+      required.push(paramsKey);
+    }
+    const block = {
+      info: { input, output: { type: 'json' } },
+      schema: {
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        type: 'object',
+        properties: {
+          input: { type: 'object', properties: inputProps, required, additionalProperties: false },
+          output: { type: 'object', properties: { type: { type: 'string' } }, required: ['type'] }
+        },
+        required: ['input']
+      }
+    };
+    if (resource.routeTemplate) block.routeTemplate = resource.routeTemplate;
+    return block;
   }
 
   /**
@@ -308,11 +358,20 @@ class X402 {
         scheme: 'exact', network, amount: String(terms.minAmount), asset, payTo: terms.payTo, maxTimeoutSeconds: this.maxTimeoutSeconds,
         description: resource.title || resource.id, mimeType: resource.mimeType || 'application/json'
       };
-      const bazaar = this._bazaarBlock(resource);
-      if (bazaar) requirements.extensions = { bazaar };
+      // extra.feePayer is REQUIRED by the exact-svm scheme -- without it a
+      // facilitator can't tell a client who the fee payer is, and CDP
+      // rejects paymentRequirements missing it as invalid_payload. Re-derive
+      // via the same _feePayer() the 402 quote used, so the advertised fee
+      // payer always matches whichever facilitator actually settles this.
+      const feePayer = await this._feePayer();
+      if (feePayer) requirements.extra = { feePayer };
 
       const payload = Object.assign({}, payment);
       if (!payload.resource && resourceUrl) payload.resource = { url: resourceUrl, description: resource.title || resource.id, mimeType: resource.mimeType || 'application/json' };
+      // Bazaar discovery extension -- see _bazaarBlock() for shape/placement
+      // details. Belongs on payload.extensions, not requirements.extensions.
+      const bazaar = this._bazaarBlock(resource);
+      if (bazaar) payload.extensions = Object.assign({}, payload.extensions, { bazaar });
 
       const v = await this._anyFacilitatorCall('/verify', payload, requirements);
       const vb = v.body || {};

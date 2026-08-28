@@ -60,24 +60,34 @@ Every quote — either path — is bound to a fresh, single-use `reference` and 
 
 ## CDP Bazaar discoverability
 
-Give any resource an `outputSchema` (plain JSON Schema) and it's automatically marked `discoverable: true` for the [x402 Bazaar](https://docs.cdp.coinbase.com/x402/core-concepts/bazaar) whenever it settles through CDP:
+Give any resource an `outputSchema` (plain JSON Schema) and it's automatically catalogued into the [x402 Bazaar](https://docs.cdp.coinbase.com/x402/core-concepts/bazaar) the moment it settles through CDP — built to the actual [bazaar extension spec](https://github.com/coinbase/x402/blob/main/specs/extensions/bazaar.md) (an `{info, schema}` object on `paymentPayload.extensions.bazaar`), not a guess at it:
 
 ```js
 const resource = {
   id: 'token-price',
   title: 'Live token price',
+  method: 'GET',
   price: 1000,
   outputSchema: {
     type: 'object',
     properties: { price_usd: { type: 'number' } }
   },
   inputSchema: { mint: 'Token mint address' },
-  category: 'Data',
-  tags: ['crypto', 'price']
+  // Optional: for a path-param route like /api/price/EPjFWdd5..., set
+  // routeTemplate so every concrete mint groups under one catalog entry
+  // instead of a separate listing per mint (the spec's "Dynamic Routes"
+  // mechanism). Without it, inputSchema keys are advertised as queryParams
+  // instead — the safer default when this library doesn't know your routing.
+  routeTemplate: '/api/price/:mint',
+  // Optional: a real example value per inputSchema key, shown to agents
+  // browsing the catalog. Falls back to the key name itself if omitted.
+  inputExample: { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }
 };
 ```
 
-Opt a specific resource out with `resource.bazaar = false`, or pass a fully custom block via `resource.bazaar = { discoverable: true, ... }`.
+Opt a specific resource out with `resource.bazaar = false`, or pass a fully custom `{info, schema}` block via `resource.bazaar = { info: {...}, schema: {...} }` if you need something this auto-derivation can't express (an MCP tool, for instance — see the spec).
+
+**Verified with real money**, not just against the spec doc: all 10 resource kinds on [saylorinnovations.com](https://saylorinnovations.com)'s Watchdog API were paid for through this exact code path and confirmed accepted by CDP (`EXTENSION-RESPONSES` decoding to `{"bazaar":{"status":"processing"}}`, never `"rejected"`) — `price`, `token`, `security`, `narrative`, `wallet`, `trending`, `launches`, `holders`, `history`, and `compare`. An earlier version of this shape (`{discoverable, category, tags, inputSchema, outputSchema}` on `paymentRequirements.extensions`) silently catalogued nothing at all — CDP acknowledged the request but had nothing to report, every time.
 
 ## API
 
@@ -95,7 +105,9 @@ Opt a specific resource out with `resource.bazaar = false`, or pass a fully cust
 
 ### `resource` shape
 
-`{ id, title, price, description?, mimeType?, license?, tokenCount?, inputSchema?, outputSchema?, method?, freeSample?, category?, tags?, bazaar? }`
+`{ id, title, price, description?, mimeType?, license?, tokenCount?, inputSchema?, outputSchema?, method?, freeSample?, category?, tags?, routeTemplate?, inputExample?, bazaar? }`
+
+`routeTemplate` and `inputExample` only affect the Bazaar block (see above) — everything else in the 402/settlement flow ignores them.
 
 `price` is in atomic USDC units (6 decimals) — `10000` = $0.01.
 

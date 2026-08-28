@@ -1,6 +1,6 @@
 {
   "name": "solana-x402",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-dependency x402 (HTTP 402 Payment Required) resource server for Solana — self-verified settlement with no facilitator fee, plus optional CDP/PayAI facilitator settlement with automatic x402 Bazaar discoverability. Base (EVM) supported too.",
   "main": "index.js",
   "files": [
