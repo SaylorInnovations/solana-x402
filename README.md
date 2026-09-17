@@ -6,6 +6,15 @@ Most x402 server SDKs assume you'll route every payment through a facilitator. T
 
 Built and battle-tested in production at [saylorinnovations.com](https://saylorinnovations.com) — real Solana and Base payments settled, both self-verified and facilitator-routed.
 
+## Agent buyer quickstart
+
+The live discovery front door is [agents.saylorinnovations.com](https://agents.saylorinnovations.com/).
+It links the compact listing, full manifest, OpenAPI description, MCP server, and
+free samples. See [`AGENT_QUICKSTART.md`](AGENT_QUICKSTART.md) and
+[`examples/agent-client.mjs`](examples/agent-client.mjs) for a copy-paste buyer
+client using the official x402 fetch wrapper. Paid resource URLs remain on
+`saylorinnovations.com/api/...`; the `agents` host is the agent-facing catalog.
+
 ## Why this exists
 
 - **No facilitator required for Solana.** The self-verify path costs you nothing but an RPC call (Helius, or any Solana RPC).
