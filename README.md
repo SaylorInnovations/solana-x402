@@ -8,6 +8,13 @@ Built and battle-tested in production at [saylorinnovations.com](https://saylori
 
 ## Agent buyer quickstart
 
+Try the live API in one minute: `curl https://saylorinnovations.com/api/sample/security` (free
+Solana rug-risk sample), then pay for the real call with
+[`examples/agent-client-solana.mjs`](examples/agent-client-solana.mjs) ($0.01 USDC). The task
+table (rug risk, holder concentration, Polymarket odds, funding rates, ERC-20 balances, sanctions
+screening, web page to markdown) is in [`AGENT_QUICKSTART.md`](AGENT_QUICKSTART.md#try-it-in-one-minute).
+
+
 The live discovery front door is [agents.saylorinnovations.com](https://agents.saylorinnovations.com/).
 It links the compact listing, full manifest, OpenAPI description, MCP server, and
 free samples. See [`AGENT_QUICKSTART.md`](AGENT_QUICKSTART.md) and
